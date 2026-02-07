@@ -15,5 +15,5 @@
 # 付録
 
 - [用語集](glossary.md)
-- [未解決の疑問](appendix/questions.md)
 - [ファイル索引](appendix/file-index.md)
+

@@ -87,29 +87,42 @@ def get_recent_sessions(n: int = 5) -> list[dict]:
     return sessions
 
 
-def get_exploration_status() -> str:
-    """exploration-log.md からフェーズ進捗を取得する。"""
+def get_exploration_status() -> dict:
+    """exploration-log.md からフェーズ進捗とカバレッジを取得する。"""
     log_file = STATE_DIR / "exploration-log.md"
+    result = {"current_phase": "（不明）", "coverage_total": 0, "coverage_done": 0}
     if not log_file.exists():
-        return "（exploration-log.md が見つかりません）"
+        return result
 
     try:
         content = log_file.read_text(encoding="utf-8")
-        # フェーズ進捗の部分を抽出
-        lines = []
-        in_phase = False
+
+        # 現在のフェーズを抽出
         for line in content.splitlines():
-            if "フェーズ進捗" in line or "Phase" in line.lower():
-                in_phase = True
+            if line.startswith("Phase ") and "現在のフェーズ" not in line:
+                result["current_phase"] = line.strip()
+                break
+
+        # カバレッジマップから調査済み/未調査をカウント
+        in_coverage = False
+        for line in content.splitlines():
+            if "カバレッジマップ" in line:
+                in_coverage = True
                 continue
-            if in_phase:
-                if line.startswith("- "):
-                    lines.append(line)
-                elif line.startswith("---") or (line.startswith("#") and lines):
+            if in_coverage:
+                if line.startswith("#"):
                     break
-        return "\n".join(lines) if lines else "（フェーズ情報なし）"
+                if line.startswith("|") and "領域" not in line and "---" not in line:
+                    result["coverage_total"] += 1
+                    # 深度が「-」でなければ調査済み
+                    cols = [c.strip() for c in line.split("|")]
+                    if len(cols) >= 3 and cols[2] != "-" and cols[2] != "":
+                        result["coverage_done"] += 1
+
     except (OSError, UnicodeDecodeError):
-        return "（読み取りエラー）"
+        pass
+
+    return result
 
 
 def main():
@@ -144,8 +157,10 @@ def main():
             print(f"  {status} {comp['name']} ({comp['file_count']} files)")
 
     # フェーズ進捗
-    print("\n🚀 フェーズ進捗:")
-    print(get_exploration_status())
+    exploration = get_exploration_status()
+    print(f"\n🚀 現在のフェーズ: {exploration['current_phase']}")
+    if exploration["coverage_total"] > 0:
+        print(f"   カバレッジ: {exploration['coverage_done']}/{exploration['coverage_total']} 領域調査済み")
 
     # 最近のセッション
     sessions = get_recent_sessions()

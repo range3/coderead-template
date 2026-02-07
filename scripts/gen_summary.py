@@ -27,13 +27,12 @@ FOOTER = """
 # 付録
 
 - [用語集](glossary.md)
-- [未解決の疑問](appendix/questions.md)
 - [ファイル索引](appendix/file-index.md)
 """
 
 # 走査から除外するファイル/ディレクトリ
 EXCLUDE_FILES = {"README.md", "SUMMARY.md", "glossary.md"}
-EXCLUDE_DIRS = {"appendix"}
+EXCLUDE_DIRS = {"appendix", "investigations"}
 
 
 def get_title(filepath: Path) -> str:
@@ -114,6 +113,14 @@ def generate_summary() -> str:
         parts.append("\n\n---\n\n# コンポーネント\n")
         comp_lines = scan_directory(comp_dir, DOCS_SRC)
         parts.append("\n".join(comp_lines))
+
+    # 調査報告セクション
+    inv_dir = DOCS_SRC / "investigations"
+    if inv_dir.exists():
+        inv_lines = scan_directory(inv_dir, DOCS_SRC)
+        if inv_lines:
+            parts.append("\n\n---\n\n# 調査報告\n")
+            parts.append("\n".join(inv_lines))
 
     parts.append(FOOTER)
 

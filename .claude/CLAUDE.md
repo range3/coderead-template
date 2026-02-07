@@ -15,19 +15,31 @@
 .claude/CLAUDE.md          ← このファイル（常に参照）
 target/                    ← 対象OSSソースコード（git submodule）
 docs/src/                  ← 公開ドキュメント（mdbook用）
+docs/src/investigations/   ← トピック別調査報告
 .state/                    ← 調査状態管理（Claude Code用）
+.state/questions.md        ← 未解決の疑問（調査を駆動）
 templates/                 ← ドキュメントテンプレート
 scripts/                   ← ユーティリティスクリプト
 ```
+
+## Phase境界ルール（厳守）
+
+**1セッション = 1 Phase。複数Phaseをまたぐセッションは禁止。**
+
+- Phase Nの完了条件を全て満たすまでPhase N+1に進まない
+- planモードでは現在のPhaseの計画のみを立てる。次Phase以降は「概要」のみ記載可
+- Phase完了時は必ずセッション終了プロトコルを実行し、next-actions.mdに「Phase N+1 開始」と明記する
+- 対象OSSの規模が小さくても、Phase境界は守る（品質とコンテキスト効率のため）
 
 ## 調査プロトコル
 
 ### セッション開始時（必ず実行）
 
-1. `.state/exploration-log.md` を読んで全体の進捗を把握
-2. `.state/next-actions.md` を読んで今回の作業を決定
+1. `.state/exploration-log.md` を読んで現在のPhaseと全体の進捗を把握
+2. `.state/next-actions.md` を読んで今回の作業を決定（現在のPhaseに関係するアクションのみ）
 3. 必要に応じて `.state/context-index.md` で既存知見を確認
-4. 前回の続きの場合は `.state/sessions/` の該当ファイルを読む
+4. 必要に応じて `.state/questions.md` を読み、調査すべき疑問を把握
+5. 前回の続きの場合は `.state/sessions/` の該当ファイルを読む（任意。詳細が必要な場合のみ）
 
 ### 調査中
 
@@ -46,16 +58,31 @@ scripts/                   ← ユーティリティスクリプト
 #### ドキュメントへの書き込み
 - 発見は適切な `docs/src/` 配下のファイルに記録
 - 新しいコンポーネントを発見したら `docs/src/components/` にディレクトリを作成
+- トピック別の調査報告は `docs/src/investigations/` に配置
 - テンプレート（`templates/`）を参照して一貫した形式で書く
-- **ファイル参照は必ず `target/` からの相対パスと行番号を記載**: `target/vllm/path/to/file.py:123`
+- **ファイル参照は必ず `target/` からの相対パスと行番号を記載**: `target/path/to/file.py:123`
+
+#### ツール選択ガイド
+
+| やりたいこと | 使うべきツール | 理由 |
+|---|---|---|
+| 特定の定義を探す | Grep | 精密な位置特定 |
+| ファイル種類の検索 | Glob | 高速なファイル発見 |
+| ファイルの一部を読む | Read (offset/limit指定) | コンテキスト最小 |
+| 広い範囲の構造理解 | Task (Explore agent) | 複数パス追跡可能 |
+| 既存知見の確認 | Read (.state/ or docs/src/) | ソース再読より低コスト |
+| 単純な事実確認 | ドキュメント参照 | ファイル操作不要 |
+
+**注意**: 単純なファイル読みにExplore agentを使わない（コスト高）。
 
 ### セッション終了時（必ず実行）
 
-1. `.state/exploration-log.md` を更新（1行追加）
+1. `.state/exploration-log.md` を更新（カバレッジマップ・セッション履歴に追記）
 2. `.state/context-index.md` を更新（新規/変更ドキュメントを反映）
 3. `.state/next-actions.md` を更新（次回やるべきことを記載）
-4. `.state/sessions/` にセッション記録を作成/更新
-5. `docs/src/` の変更があれば `python scripts/gen_summary.py` でSUMMARY.md更新
+4. `.state/questions.md` を更新（新しい疑問の追加、解決済みの消込）
+5. `.state/sessions/` にセッション記録を作成（命名: `YYYYMMDD-phaseN-topic.md`）
+6. `docs/src/` の変更があれば `python scripts/gen_summary.py` でSUMMARY.md更新
 
 ## ドキュメント規約
 
@@ -76,7 +103,7 @@ scripts/                   ← ユーティリティスクリプト
 ### ファイル参照形式
 
 ```markdown
-**参照**: `target/vllm/v1/core/sched/scheduler.py:315` (schedule)
+**参照**: `target/path/to/file.py:315` (function_name)
 ```
 
 ### 図の記法
@@ -93,27 +120,78 @@ graph TD
 
 ASCII図も可（Mermaidで表現しにくい場合）。
 
+## アンチパターン（やってはいけないこと）
+
+1. 大きなファイル（500行以上）を全行読み込む → offset/limitを使う
+2. grepせずに当て推量でファイルを開く → まずGrepで検索
+3. [VERIFIED]のドキュメントがある内容をソースから再読する → ドキュメントを信頼
+4. Phase境界を越えて調査を進める → 1セッション1Phase
+5. 1セッションで3つ以上の新しいコンポーネントを調査する → 集中する
+6. コンテキストが枯渇してからまとめを書く → 発見したらすぐ記録
+7. exploration-log.md確認前に探索開始しない → 重複調査を防ぐ
+8. summary.mdなしで詳細ドキュメントを作成しない → まず概要から
+
 ## 調査フェーズガイド
 
-### Phase 0: オリエンテーション
-- 対象OSSのREADME、公式ドキュメントを読む
-- 主要エントリポイントを特定
+### Phase 0: オリエンテーション（1-2セッション）
+
+**目標**: 全体像の把握、主要エントリポイント特定
+
+成果物:
 - `docs/src/architecture/overview.md` を作成
-- `docs/src/glossary.md` に用語を蓄積開始
+- `docs/src/glossary.md` に主要用語を登録
 
-### Phase 1: 垂直スライス
-- ユーザー入力から最終出力までの1パスを完全に追跡
+完了条件:
+- [ ] overview.mdが作成されている
+- [ ] 主要エントリポイントが3つ以上特定されている
+- [ ] glossary.mdに10用語以上登録されている
+
+禁止: 個別関数の実装詳細に入らない。コンポーネント間の詳細な相互作用を追わない。
+
+### Phase 1: 垂直スライス（2-3セッション）
+
+**目標**: 1つのリクエストパスを入力から出力まで完全に追跡
+
+成果物:
 - `docs/src/architecture/data-flow.md` を作成
-- 全コンポーネントの「存在」を認識し、優先度をつける
+- パス上の各コンポーネントの `summary.md` を作成
+- コンポーネント優先度リストを作成
 
-### Phase 2: コンポーネント別深堀り
-- 優先度順にコンポーネントを調査
-- 各コンポーネントの `summary.md` + 詳細ドキュメントを作成
-- 相互参照を更新
+完了条件:
+- [ ] data-flow.mdにエンドツーエンドのフローが記載されている
+- [ ] フロー上の全コンポーネントが `docs/src/components/` に登録されている
+- [ ] 各コンポーネントの優先度が決定されている
 
-### Phase 3: 横断的機能の理解
-- 複数コンポーネントにまたがる機能を調査
-- 設定伝播、エラーハンドリング、最適化パターン等
+禁止: フロー上にないコンポーネントを深掘りしない。最適化やエッジケースは追わない。
+
+### Phase 2: コンポーネント別深堀り（継続的）
+
+**目標**: 優先度順にコンポーネントを詳細調査
+
+成果物:
+- 各コンポーネントの `summary.md` + 詳細ドキュメント
+- 相互参照の更新
+
+完了条件（コンポーネントごと）:
+- [ ] summary.mdが[MEDIUM]以上の深度で作成されている
+- [ ] 主要なクラス/関数がソースコード参照つきで記載されている
+- [ ] 依存関係（上流・下流）が明記されている
+
+禁止: 1セッションで3つ以上のコンポーネントに手を広げない。
+
+### Phase 3: 横断的機能の理解（継続的）
+
+**目標**: 複数コンポーネントにまたがる機能を調査
+
+成果物:
+- `docs/src/investigations/` にトピック別調査報告
+- 既存ドキュメントの相互参照を強化
+
+完了条件（テーマごと）:
+- [ ] 調査報告がinvestigations/に作成されている
+- [ ] 関連する全コンポーネントのsummary.mdが更新されている
+
+禁止: 関連コンポーネントのsummary.mdが未作成のまま横断調査を開始しない。
 
 ## コンテキスト管理
 
@@ -121,16 +199,28 @@ ASCII図も可（Mermaidで表現しにくい場合）。
 
 ```
 レベル0（常に読む）: .state/exploration-log.md, next-actions.md （〜50行）
-レベル1（セッション開始時）: context-index.md （〜50行）
+レベル1（セッション開始時）: context-index.md, questions.md （〜50行）
 レベル2（必要時）: 対象コンポーネントの summary.md （〜100行）
-レベル3（深堀り時）: 個別ドキュメント
-レベル4（ピンポイント）: target/ 内のソースコード
+レベル3（深堀り時）: 個別ドキュメント、investigations/
+レベル4（前セッション詳細時）: .state/sessions/ の該当ファイル
+レベル5（ピンポイント）: target/ 内のソースコード
 ```
 
 ### context-index.md の維持
 
 新しいドキュメントを作成/大幅更新したら、context-index.md に1行サマリを追加/更新する。
 これにより、次回セッションで「どのドキュメントに何が書いてあるか」を即座に把握できる。
+
+### コンテキスト管理戦略
+
+**Strategy 1: Summary-First**
+新しい領域を調べる前に、context-index.mdで既存ドキュメントを確認。あればsummary.mdを読んでから、不足分だけソースに当たる。
+
+**Strategy 2: 質問駆動探索**
+漠然と読まない。questions.mdから具体的な問いを1つ選び、その回答を得ることを目的にソースを読む。
+
+**Strategy 3: 増分コンテキスト**
+まずgrepで当たりをつけ、次にRead(offset/limit)で該当部分だけ読む。ファイル全体を読まない。
 
 ## タスク実行
 

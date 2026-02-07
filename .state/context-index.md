@@ -19,5 +19,5 @@
 | ドキュメント                      | 内容             | 深度 | 確信度 | 最終更新 |
 | --------------------------------- | ---------------- | ---- | ------ | -------- |
 | `docs/src/glossary.md`            | 用語集           | -    | -      | -        |
-| `docs/src/appendix/questions.md`  | 未解決の疑問     | -    | -      | -        |
+| `.state/questions.md`             | 未解決の疑問     | -    | -      | -        |
 | `docs/src/appendix/file-index.md` | 主要ファイル索引 | -    | -      | -        |
