@@ -162,6 +162,16 @@ def main():
     if exploration["coverage_total"] > 0:
         print(f"   カバレッジ: {exploration['coverage_done']}/{exploration['coverage_total']} 領域調査済み")
 
+    # 読解ガイド
+    reading_guide = STATE_DIR / "reading-guide.md"
+    if reading_guide.exists():
+        rg_content = reading_guide.read_text(encoding="utf-8")
+        has_rules = "### " in rg_content and "[TODO]" not in rg_content.split("## コードベース構造ルール")[0] if "## コードベース構造ルール" in rg_content else False
+        has_priorities = "1." in rg_content.split("### 関心領域")[1] if "### 関心領域" in rg_content else False
+        rules_status = "✓ 設定済み" if has_rules else "○ 未設定"
+        priority_status = "✓ 設定済み" if has_priorities else "○ 未設定"
+        print(f"\n📋 読解ガイド: ルール={rules_status}, ユーザー優先度={priority_status}")
+
     # 最近のセッション
     sessions = get_recent_sessions()
     if sessions:

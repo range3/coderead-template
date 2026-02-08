@@ -21,3 +21,4 @@
 | `docs/src/glossary.md`            | 用語集           | -    | -      | -        |
 | `.state/questions.md`             | 未解決の疑問     | -    | -      | -        |
 | `docs/src/appendix/file-index.md` | 主要ファイル索引 | -    | -      | -        |
+| `.state/reading-guide.md`         | 対象OSS固有の読解ルールとユーザー優先度 | - | - | - |

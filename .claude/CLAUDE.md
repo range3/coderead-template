@@ -18,6 +18,7 @@ docs/src/                  ← 公開ドキュメント（mdbook用）
 docs/src/investigations/   ← トピック別調査報告
 .state/                    ← 調査状態管理（Claude Code用）
 .state/questions.md        ← 未解決の疑問（調査を駆動）
+.state/reading-guide.md    ← 対象OSS固有の読解ルール・ユーザー優先度
 templates/                 ← ドキュメントテンプレート
 scripts/                   ← ユーティリティスクリプト
 ```
@@ -36,10 +37,11 @@ scripts/                   ← ユーティリティスクリプト
 ### セッション開始時（必ず実行）
 
 1. `.state/exploration-log.md` を読んで現在のPhaseと全体の進捗を把握
-2. `.state/next-actions.md` を読んで今回の作業を決定（現在のPhaseに関係するアクションのみ）
-3. 必要に応じて `.state/context-index.md` で既存知見を確認
-4. 必要に応じて `.state/questions.md` を読み、調査すべき疑問を把握
-5. 前回の続きの場合は `.state/sessions/` の該当ファイルを読む（任意。詳細が必要な場合のみ）
+2. `.state/reading-guide.md` を読んで対象OSS固有のルールとユーザー優先度を把握
+3. `.state/next-actions.md` を読んで今回の作業を決定（現在のPhaseに関係するアクションのみ）
+4. 必要に応じて `.state/context-index.md` で既存知見を確認
+5. 必要に応じて `.state/questions.md` を読み、調査すべき疑問を把握
+6. 前回の続きの場合は `.state/sessions/` の該当ファイルを読む（任意。詳細が必要な場合のみ）
 
 ### 調査中
 
@@ -81,8 +83,9 @@ scripts/                   ← ユーティリティスクリプト
 2. `.state/context-index.md` を更新（新規/変更ドキュメントを反映）
 3. `.state/next-actions.md` を更新（次回やるべきことを記載）
 4. `.state/questions.md` を更新（新しい疑問の追加、解決済みの消込）
-5. `.state/sessions/` にセッション記録を作成（命名: `YYYYMMDD-phaseN-topic.md`）
-6. `docs/src/` の変更があれば `python scripts/gen_summary.py` でSUMMARY.md更新
+5. `.state/reading-guide.md` を更新（新ルール発見、確信度昇格があれば）
+6. `.state/sessions/` にセッション記録を作成（命名: `YYYYMMDD-phaseN-topic.md`）
+7. `docs/src/` の変更があれば `python scripts/gen_summary.py` でSUMMARY.md更新
 
 ## ドキュメント規約
 
@@ -130,27 +133,64 @@ ASCII図も可（Mermaidで表現しにくい場合）。
 6. コンテキストが枯渇してからまとめを書く → 発見したらすぐ記録
 7. exploration-log.md確認前に探索開始しない → 重複調査を防ぐ
 8. summary.mdなしで詳細ドキュメントを作成しない → まず概要から
+9. reading-guide.mdでスキップ対象とした領域を深堀りする → ルールに従う
+10. ユーザー優先度を確認せずにPhase 1のスライスを選択する → 必ずユーザーに確認
 
 ## 調査フェーズガイド
 
 ### Phase 0: オリエンテーション（1-2セッション）
 
-**目標**: 全体像の把握、主要エントリポイント特定
+**目標**: 全体像の把握、主要エントリポイント特定、読解戦略の確立
+
+#### Phase 0a: 構造把握（セッション1）
 
 成果物:
 - `docs/src/architecture/overview.md` を作成
 - `docs/src/glossary.md` に主要用語を登録
+- `.state/reading-guide.md` の「コードベース構造ルール」セクションを作成
+
+手順:
+1. README、公式ドキュメント、ディレクトリ構成を確認
+2. 主要エントリポイントを特定
+3. コードベースを構造分析し、以下を判断:
+   - 新旧アーキテクチャが並存するか → どちらにフォーカスすべきか
+   - 同種の実装が大量にあるか → リファレンス実装を1つ選び、他は差分記録
+   - 複数プラットフォーム対応か → 主要プラットフォームを特定
+   - 読む必要がない領域はどこか
+4. 分析結果を `.state/reading-guide.md` に記録（`templates/reading-guide.md` 参照）
 
 完了条件:
 - [ ] overview.mdが作成されている
 - [ ] 主要エントリポイントが3つ以上特定されている
 - [ ] glossary.mdに10用語以上登録されている
+- [ ] reading-guide.mdに構造ルールが3つ以上記載されている
+
+#### Phase 0b: 優先度確認（セッション2）
+
+成果物:
+- `.state/reading-guide.md` の「ユーザー優先度」セクションを完成
+
+手順:
+1. Phase 0aの成果をもとに、発見したコンポーネント/領域の一覧をユーザーに提示
+2. 以下をユーザーに質問:
+   - 「どの領域に最も関心がありますか？（複数可、優先順位をつけてください）」
+   - 「この調査で最終的に何を得たいですか？（例: 自社への応用、バグ修正、貢献準備）」
+   - 「関心が低い/スキップしてよい領域はありますか？」
+3. 回答を `.state/reading-guide.md` の「ユーザー優先度」セクションに記録
+4. ユーザー優先度と構造ルールを統合し、Phase 1で追跡する垂直スライスを提案
+
+完了条件:
+- [ ] ユーザー優先度が reading-guide.md に記録されている
+- [ ] Phase 1 で追跡する垂直スライスの候補が next-actions.md に記載されている
+
+**注**: 小規模OSSではPhase 0a+0bを1セッションで完了してよい。
 
 禁止: 個別関数の実装詳細に入らない。コンポーネント間の詳細な相互作用を追わない。
 
 ### Phase 1: 垂直スライス（2-3セッション）
 
 **目標**: 1つのリクエストパスを入力から出力まで完全に追跡
+（`.state/reading-guide.md` のユーザー優先度に基づいてスライスを選択）
 
 成果物:
 - `docs/src/architecture/data-flow.md` を作成
@@ -162,11 +202,13 @@ ASCII図も可（Mermaidで表現しにくい場合）。
 - [ ] フロー上の全コンポーネントが `docs/src/components/` に登録されている
 - [ ] 各コンポーネントの優先度が決定されている
 
-禁止: フロー上にないコンポーネントを深掘りしない。最適化やエッジケースは追わない。
+禁止: フロー上にないコンポーネントを深掘りしない。最適化やエッジケースは追わない。reading-guide.mdでスキップ対象とした領域には入らない。
 
 ### Phase 2: コンポーネント別深堀り（継続的）
 
 **目標**: 優先度順にコンポーネントを詳細調査
+（`.state/reading-guide.md` のユーザー優先度と構造ルールに従って順序決定。
+  代表実装パターン適用領域では、リファレンス実装を深堀りし他は差分記録）
 
 成果物:
 - 各コンポーネントの `summary.md` + 詳細ドキュメント
@@ -198,7 +240,7 @@ ASCII図も可（Mermaidで表現しにくい場合）。
 ### 読み込み優先度
 
 ```
-レベル0（常に読む）: .state/exploration-log.md, next-actions.md （〜50行）
+レベル0（常に読む）: .state/exploration-log.md, next-actions.md, reading-guide.md （〜80行）
 レベル1（セッション開始時）: context-index.md, questions.md （〜50行）
 レベル2（必要時）: 対象コンポーネントの summary.md （〜100行）
 レベル3（深堀り時）: 個別ドキュメント、investigations/
@@ -221,6 +263,9 @@ ASCII図も可（Mermaidで表現しにくい場合）。
 
 **Strategy 3: 増分コンテキスト**
 まずgrepで当たりをつけ、次にRead(offset/limit)で該当部分だけ読む。ファイル全体を読まない。
+
+**Strategy 4: 読解ガイド準拠**
+reading-guide.mdのルールに従う。スキップ対象は避け、代表実装パターン適用領域ではリファレンス実装のみ深堀りし他は差分で記録する。ユーザー優先度の高い領域から着手する。
 
 ## タスク実行
 

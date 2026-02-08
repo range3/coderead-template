@@ -96,6 +96,7 @@ docs/
 ├── exploration-log.md     # 探索進捗（集約）
 ├── context-index.md       # ドキュメント索引
 ├── next-actions.md        # 次回アクション
+├── reading-guide.md       # 対象OSS固有の読解ルール・ユーザー優先度
 └── sessions/              # セッション記録
 templates/                 # ドキュメントテンプレート
 scripts/                   # ユーティリティスクリプト
@@ -105,7 +106,7 @@ scripts/                   # ユーティリティスクリプト
 
 | フェーズ                      | 目的             | 成果物                                    |
 | ----------------------------- | ---------------- | ----------------------------------------- |
-| Phase 0: オリエンテーション   | 全体像の把握     | `architecture/overview.md`, `glossary.md` |
+| Phase 0: オリエンテーション   | 全体像の把握     | `architecture/overview.md`, `glossary.md`, `.state/reading-guide.md` |
 | Phase 1: 垂直スライス         | 主要フローの追跡 | `architecture/data-flow.md`               |
 | Phase 2: コンポーネント深堀り | 個別分析         | `components/*/summary.md`                 |
 | Phase 3: 横断的機能           | 機能横断の理解   | 各ドキュメントの充実                      |
